@@ -9,7 +9,12 @@ Pull a decrypted IPA from a jailbroken device
  3. a. Run usbmuxd/iproxy SSH forwarding over USB (Default 2222 -> 22). e.g. `iproxy 2222 22`<br>b. Alternatively you can specify ip and port of idevice directly through -H and -p
  4. Run ./dump.py `Display name` or `Bundle identifier`
 
+
+### Additional Options (by mafu):
 Example: `python dump.py -H 192.168.11.9 -p 22 -r 192.168.11.9 -b com.test.app`
+- --remote(-r) <ip> : Connect to remote idevice instead of usb device.
+- --bypass(-b) : Bypass jb detection that crashes app on startup
+
 
 For SSH/SCP make sure you have your public key added to the target device's ~/.ssh/authorized_keys file.
 
