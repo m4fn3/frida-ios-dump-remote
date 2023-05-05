@@ -307,7 +307,7 @@ if __name__ == '__main__':
     parser.add_argument('-u', '--user', dest='ssh_user', help='Specify SSH username')
     parser.add_argument('-P', '--password', dest='ssh_password', help='Specify SSH password')
     parser.add_argument('-r', '--remote', dest='remote_ip', help='Specify remote ip')
-    parser.add_argument('-b', '--bypass', dest='bypass', help='Bypass jb detection that crashes app on startup')
+    parser.add_argument('-b', '--bypass', dest='bypass', help='Bypass jb detection that crashes app on startup', action='store_true')
     parser.add_argument('-K', '--key_filename', dest='ssh_key_filename', help='Specify SSH private key file path')
     parser.add_argument('target', nargs='?', help='Bundle identifier or display name of the target app')
 
