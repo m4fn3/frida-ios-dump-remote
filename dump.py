@@ -37,6 +37,7 @@ Password = 'alpine'
 Host = 'localhost'
 Port = 2222
 KeyFileName = None
+bypass_jb_detection_on_startup = False  # prevent app from closing app at launch by jb detection
 
 TEMP_DIR = tempfile.gettempdir()
 PAYLOAD_DIR = 'Payload'
@@ -72,6 +73,11 @@ def get_usb_iphone():
     return device
 
 
+def get_remote_iphone(remote_ip):
+    device = frida.get_device_manager().add_remote_device(remote_ip)
+    return device
+
+
 def generate_ipa(path, display_name):
     ipa_filename = display_name + '.ipa'
 
@@ -93,8 +99,9 @@ def generate_ipa(path, display_name):
         print(e)
         finished.set()
 
+
 def on_message(message, data):
-    t = tqdm(unit='B',unit_scale=True,unit_divisor=1024,miniters=1)
+    t = tqdm(unit='B', unit_scale=True, unit_divisor=1024, miniters=1)
     last_sent = [0]
 
     def progress(filename, size, sent):
@@ -116,7 +123,7 @@ def on_message(message, data):
             scp_from = dump_path
             scp_to = PAYLOAD_PATH + '/'
 
-            with SCPClient(ssh.get_transport(), progress = progress, socket_timeout = 60) as scp:
+            with SCPClient(ssh.get_transport(), progress=progress, socket_timeout=60) as scp:
                 scp.get(scp_from, scp_to)
 
             chmod_dir = os.path.join(PAYLOAD_PATH, os.path.basename(dump_path))
@@ -134,7 +141,7 @@ def on_message(message, data):
 
             scp_from = app_path
             scp_to = PAYLOAD_PATH + '/'
-            with SCPClient(ssh.get_transport(), progress = progress, socket_timeout = 60) as scp:
+            with SCPClient(ssh.get_transport(), progress=progress, socket_timeout=60) as scp:
                 scp.get(scp_from, scp_to, recursive=True)
 
             chmod_dir = os.path.join(PAYLOAD_PATH, os.path.basename(app_path))
@@ -149,6 +156,7 @@ def on_message(message, data):
         if 'done' in payload:
             finished.set()
     t.close()
+
 
 def compare_applications(a, b):
     a_is_running = a.pid != 0
@@ -267,11 +275,12 @@ def open_target_app(device, name_or_bundleid):
         if not pid:
             pid = device.spawn([bundle_identifier])
             session = device.attach(pid)
-            device.resume(pid)
+            if not bypass_jb_detection_on_startup:
+                device.resume(pid)
         else:
             session = device.attach(pid)
     except Exception as e:
-        print(e) 
+        print(e)
 
     return session, display_name, bundle_identifier
 
@@ -297,6 +306,8 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', dest='ssh_port', help='Specify SSH port')
     parser.add_argument('-u', '--user', dest='ssh_user', help='Specify SSH username')
     parser.add_argument('-P', '--password', dest='ssh_password', help='Specify SSH password')
+    parser.add_argument('-r', '--remote', dest='remote_ip', help='Specify remote ip')
+    parser.add_argument('-b', '--bypass', dest='bypass', help='Bypass jb detection that crashes app on startup')
     parser.add_argument('-K', '--key_filename', dest='ssh_key_filename', help='Specify SSH private key file path')
     parser.add_argument('target', nargs='?', help='Bundle identifier or display name of the target app')
 
@@ -309,7 +320,7 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(exit_code)
 
-    device = get_usb_iphone()
+    device = get_remote_iphone(args.remote_ip) if args.remote_ip else get_usb_iphone()
 
     if args.list_applications:
         list_applications(device)
@@ -327,6 +338,8 @@ if __name__ == '__main__':
             Password = args.ssh_password
         if args.ssh_key_filename:
             KeyFileName = args.ssh_key_filename
+        if args.bypass:
+            bypass_jb_detection_on_startup = True
 
         try:
             ssh = paramiko.SSHClient()
